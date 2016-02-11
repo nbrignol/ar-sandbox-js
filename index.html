@@ -41,8 +41,8 @@
 
 <title>Demo</title>
 <style>
-  #theImg {
-    width: 1px;
+  #theSample1, #theSample2 {
+    width: 50px;
   }
 </style>
 
@@ -51,48 +51,66 @@
 <body>
   <p><a href="markers.html">Voir les markers</a></p>
 
-  <p><img src="sample.jpg" id="theImg"></p>
+  <p><img src="sample.jpg" id="theSample1"> <img src="sample2.jpg" id="theSample2"></p>
 
   <div>
     <canvas id="canvasClean"></canvas>
     <canvas id="canvasAugmented"></canvas>
   </div>
   
+  <p id="message">...</p>
+
   <p><input type="file" id="theInput" /></p>
 
   <script>
+
+
   
   window.onload = function() {
 
     var theImage = undefined;
-  var threshold = 130;
+    var threshold = 130;
+    var detected = 0;
 
-  var contextAugmented = undefined;
-  var contextClean = undefined;
+    var contextAugmented = undefined;
+    var contextClean = undefined;
 
-  function handleFileSelect(evt) {
-    var files = evt.target.files; 
-    var reader = new FileReader();
-    
-    reader.onload = function(event){
-      var imgObj = new Image();
-      imgObj.src = event.target.result;
+    function handleFileSelect(evt) {
+      var files = evt.target.files; 
+      var reader = new FileReader();
       
-      imgObj.onload = function () {
-        theImage = imgObj;
-        doWork();
-      }
-    };
+      reader.onload = function(event){
+        var imgObj = new Image();
+        imgObj.src = event.target.result;
+        
+        imgObj.onload = function () {
+          theImage = imgObj;
+          tryDetect();
+        }
+      };
 
-    reader.readAsDataURL(files[0]); 
-  }
+      reader.readAsDataURL(files[0]); 
+    }
 
-  function updateCanvas() {   
-    contextAugmented.drawImage(theImage, 0,0, 320, 240);
-    contextClean.drawImage(theImage, 0,0, 320, 240);
-  }
-  
+    function handleSampleClick(){
+      theImage = this;
+      tryDetect();
+    }
 
+    function updateCanvas() {   
+      contextAugmented.drawImage(theImage, 0,0, 320, 240);
+      contextClean.drawImage(theImage, 0,0, 320, 240);
+    }
+
+    function clearMessage() {
+      document.getElementById("message").innerHTML = "";
+    }
+
+
+    function showMessage(message) {
+      document.getElementById("message").innerHTML += " " + message;
+    }
+    
     //init CANVASes
   
     var canvasClean = document.getElementById("canvasClean");
@@ -108,7 +126,9 @@
     contextAugmented = canvasAugmented.getContext('2d');
     
     //init sample image
-    theImage = document.getElementById("theImg"); 
+    theImage = document.getElementById("theSample1"); 
+    document.getElementById("theSample1").addEventListener("click", handleSampleClick);
+    document.getElementById("theSample2").addEventListener("click", handleSampleClick);
     
     //init INPUT FILE SELECT
     document.getElementById('theInput').addEventListener('change', handleFileSelect);
@@ -127,8 +147,62 @@
     var times = [];
     var pastResults = {};
   
+    tryDetect();
 
-    doWork();
+    function tryDetect(){
+      clearMessage();
+      showMessage("Detecting...");
+
+      var bestDetected = 0;
+      var bestThreshold = 0;
+
+      var tryDetect = true;
+      threshold = 90;
+     
+      window.setInterval(function(){
+        
+        if(! tryDetect) {
+          window.clearInterval(this);
+          return;
+        }
+        
+        doWork();
+        console.log("DETECTED : " + detected);            
+        console.log("BEST : " + bestDetected);      
+  
+        if (detected > bestDetected) {
+          bestDetected = detected;
+          bestThreshold = threshold;
+        }
+
+        threshold += 5;
+        
+        /*
+        if (detected==0) {
+          threshold += 10;
+        } else {
+          tryDetect = false;
+        }*/
+
+        if (threshold > 200) {
+          tryDetect = false;
+
+          if (bestDetected == 0) {
+            showMessage("Done, no detection.");
+            return;
+          }
+          
+          threshold = bestThreshold;
+          showMessage("Done with ");
+          doWork();
+          
+
+        } 
+
+      }, 0);
+
+    }
+
 
     function doWork() {
       pastResults = {};
@@ -139,26 +213,8 @@
       var dt = new Date().getTime();
       var t = new Date();
 
-      var tryDetect = true;
-      threshold = 60;
-
-      var detected;
-
-      while(tryDetect) {
-        detected = detector.detectMarkerLite(raster, threshold);
-        
-        if (detected==0) {
-          threshold += 10;
-        } else {
-          tryDetect = false;
-        }
-
-        if (threshold > 250) {
-          tryDetect;
-        }        
-      }
-      
-      console.log("detected : " + detected + " at threshold " + threshold);
+      detected = detector.detectMarkerLite(raster, threshold);
+      if (detected>0) showMessage(detected + " at threshold " + threshold + " - ");
       
       for (var idx = 0; idx<detected; idx++) {
         var id = detector.getIdMarkerData(idx);

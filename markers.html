@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Liste des markers</title>
+</head>
+
+<body>
+  
+  <div id="content">
+    
+  </div>
+  
+  <script>
+  var content = document.getElementById("content");
+  var from = 0;
+  var to = 99;
+
+  for(var i=from; i<to; i++ ) {
+    var src = "markers/" + i;
+    var line = "<img src=" + src + " /> ";
+    var link = "<a href='" + src +" '>"+line+"</a>";
+
+    content.innerHTML += link;
+  }
+  </script>
+</body>
+  
+
+</html>
